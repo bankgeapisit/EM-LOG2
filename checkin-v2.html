@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATTENDANCE SYSTEM</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700&family=Barlow:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #EFEDE8;
+  --paper:    #E8E6E0;
+  --border:   #C8C5BC;
+  --border2:  #A8A59C;
+  --text:     #1C1B18;
+  --muted:    #7A7870;
+  --orange:   #E8440A;
+  --orange2:  #C23A08;
+  --green:    #1A5C35;
+  --red:      #8C1F1F;
+  --sidebar:  80px;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Barlow', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Hidden scanner input ── */
+#scan-input {
+  position: fixed;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px; height: 1px;
+  top: 0; left: 0;
+}
+
+/* ══════════════════════════════
+   TOP BAR
+══════════════════════════════ */
+.topbar {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-right: 1px solid var(--border);
+  background: var(--orange);
+  gap: 10px;
+}
+
+.topbar-brand .logo-text {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+}
+
+.topbar-cell {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-right: 1px solid var(--border);
+  height: 100%;
+  gap: 8px;
+}
+
+.topbar-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.topbar-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  letter-spacing: 0.06em;
+}
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ══════════════════════════════
+   MAIN LAYOUT
+══════════════════════════════ */
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ══════════════════════════════
+   SIDEBAR
+══════════════════════════════ */
+.sidebar {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sidebar-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sidebar-count {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+}
+
+/* Log table */
+.log-table {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.log-table::-webkit-scrollbar { width: 3px; }
+.log-table::-webkit-scrollbar-track { background: transparent; }
+.log-table::-webkit-scrollbar-thumb { background: var(--border); }
+
+.log-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 52px;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  align-items: stretch;
+  opacity: 0;
+  animation: rowIn 0.2s ease forwards;
+}
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.log-badge-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border);
+  padding: 10px 0;
+}
+
+.log-badge {
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-radius: 2px;
+}
+
+.log-badge.in  { background: #D4EDE1; color: var(--green); }
+.log-badge.out { background: #F0D8D8; color: var(--red); }
+
+.log-info {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.log-emp {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.log-date {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.log-time-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--border);
+  padding: 0 6px;
+}
+
+.log-time {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ══════════════════════════════
+   MAIN PANEL
+══════════════════════════════ */
+.main {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  overflow: hidden;
+}
+
+.main-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 48px;
+  position: relative;
+}
+
+/* Serial / label top-left */
+.panel-label {
+  position: absolute;
+  top: 20px; left: 24px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.panel-label-right {
+  position: absolute;
+  top: 20px; right: 24px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.8;
+}
+
+/* ── Clock ── */
+.clock-wrap {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.clock-time {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(80px, 10vw, 130px);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  transition: color 0.3s ease;
+}
+
+.clock-time.mode-in  { color: var(--orange); }
+.clock-time.mode-out { color: var(--text); }
+
+.clock-date {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+/* ── Divider rule ── */
+.h-rule {
+  width: 100%;
+  max-width: 480px;
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+/* ── Mode Buttons ── */
+.mode-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 16px;
+}
+
+.mode-btn {
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 16px 12px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.mode-btn::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.12s ease;
+}
+
+.mode-btn:hover {
+  border-color: var(--border2);
+  color: var(--text);
+}
+
+.mode-btn.active-in {
+  background: var(--orange);
+  border-color: var(--orange2);
+  color: #fff;
+}
+
+.mode-btn.active-in::before { background: rgba(255,255,255,0.3); }
+
+.mode-btn.active-out {
+  background: var(--text);
+  border-color: var(--text);
+  color: #fff;
+}
+
+/* ── Scan status ── */
+.scan-status-wrap {
+  width: 100%;
+  max-width: 480px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  display: grid;
+  grid-template-columns: 3px 1fr;
+}
+
+.scan-status-bar {
+  background: var(--border);
+  transition: background 0.2s ease;
+}
+
+.scan-status-bar.mode-in  { background: var(--orange); }
+.scan-status-bar.mode-out { background: var(--text); }
+
+.scan-status-inner {
+  padding: 14px 16px;
+}
+
+.scan-step {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.scan-main {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  min-height: 28px;
+}
+
+.scan-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+  letter-spacing: 0.08em;
+}
+
+/* Ready indicator */
+.ready-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ready-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border2);
+}
+.ready-dot.on { background: var(--orange); animation: blink 1.4s ease-in-out infinite; }
+
+.ready-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ══════════════════════════════
+   BOTTOM STATUS BAR
+══════════════════════════════ */
+.statusbar {
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+}
+
+.statusbar-cell {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-right: 1px solid var(--border);
+  gap: 8px;
+}
+
+.statusbar-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.statusbar-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text);
+}
+
+.statusbar-mode {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+
+.statusbar-mode.in  { color: var(--orange); }
+.statusbar-mode.out { color: var(--text); }
+
+/* ══════════════════════════════
+   SUCCESS OVERLAY
+══════════════════════════════ */
+.success-overlay {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(232,68,10,0.06);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.success-overlay.show {
+  animation: overlayFlash 0.8s ease forwards;
+}
+
+.success-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 32px 48px;
+  text-align: center;
+  transform: translateY(8px);
+  animation: cardPop 0.8s ease forwards;
+}
+
+@keyframes overlayFlash {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes cardPop {
+  0%   { transform: translateY(8px); opacity: 0; }
+  20%  { transform: translateY(0);   opacity: 1; }
+  70%  { transform: translateY(0);   opacity: 1; }
+  100% { transform: translateY(-4px); opacity: 0; }
+}
+
+.success-type {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.success-emp {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 48px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  line-height: 1;
+}
+
+.success-time {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 8px;
+  letter-spacing: 0.08em;
+}
+
+.success-bar {
+  height: 3px;
+  margin-top: 20px;
+  background: var(--orange);
+}
+</style>
+</head>
+<body>
+
+<input id="scan-input" type="text" autocomplete="off" />
+<div class="success-overlay" id="success-overlay">
+  <div class="success-card">
+    <div class="success-type" id="s-type">CHECK IN</div>
+    <div class="success-emp" id="s-emp">EMP001</div>
+    <div class="success-time" id="s-time">09:01:23</div>
+    <div class="success-bar" id="s-bar"></div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="logo-text">Attendance</div>
+  </div>
+  <div class="topbar-meta">
+    <div class="topbar-cell">
+      <span class="topbar-label">Date</span>
+      <span class="topbar-value" id="top-date">—</span>
+    </div>
+    <div class="topbar-cell">
+      <span class="topbar-label">Station</span>
+      <span class="topbar-value">MAIN — 01</span>
+    </div>
+    <div class="topbar-cell">
+      <span class="topbar-label">Records</span>
+      <span class="topbar-value" id="top-count">0</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-dot"></div>
+    <span class="topbar-label">ONLINE</span>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Log</span>
+      <span class="sidebar-count" id="log-count">0 records</span>
+    </div>
+    <div class="log-table" id="log-table">
+      <!-- rows injected here -->
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="main-body">
+      <div class="panel-label">SCAN TERMINAL / P1</div>
+      <div class="panel-label-right" id="panel-mode-label">MODE — STANDBY<br>STEP — 01 / 02</div>
+
+      <!-- Clock -->
+      <div class="clock-wrap">
+        <div class="clock-time" id="clock">00:00:00</div>
+        <div class="clock-date" id="clock-date">—</div>
+      </div>
+
+      <div class="h-rule"></div>
+
+      <!-- Mode buttons -->
+      <div class="mode-row">
+        <button class="mode-btn" id="btn-in"  onclick="setMode('in')">↗ Check In</button>
+        <button class="mode-btn" id="btn-out" onclick="setMode('out')">↙ Check Out</button>
+      </div>
+
+      <!-- Status box -->
+      <div class="scan-status-wrap">
+        <div class="scan-status-bar" id="status-bar"></div>
+        <div class="scan-status-inner">
+          <div class="scan-step" id="step-label">STEP 01 — SELECT MODE</div>
+          <div class="scan-main" id="status-main">กรุณาเลือก Check In หรือ Check Out</div>
+          <div class="scan-sub"  id="status-sub">— ยิง QR หรือกดปุ่มด้านบน</div>
+          <div class="ready-row">
+            <div class="ready-dot" id="ready-dot"></div>
+            <span class="ready-label" id="ready-label">STANDBY</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOTTOM STATUS BAR -->
+    <div class="statusbar">
+      <div class="statusbar-cell">
+        <span class="statusbar-label">Mode</span>
+        <span class="statusbar-mode" id="sb-mode">—</span>
+      </div>
+      <div class="statusbar-cell">
+        <span class="statusbar-label">Last scan</span>
+        <span class="statusbar-value" id="sb-last">—</span>
+      </div>
+      <div class="statusbar-cell">
+        <span class="statusbar-label">In today</span>
+        <span class="statusbar-value" id="sb-in">0</span>
+      </div>
+      <div class="statusbar-cell">
+        <span class="statusbar-label">Out today</span>
+        <span class="statusbar-value" id="sb-out">0</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──
+let mode = null;
+let records = [];
+let countIn = 0, countOut = 0;
+let inputBuffer = '';
+let bufferTimer = null;
+
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  const t = now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false });
+  const d = now.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short', year:'numeric' }).toUpperCase();
+  document.getElementById('clock').textContent = t;
+  document.getElementById('clock-date').textContent = d;
+  document.getElementById('top-date').textContent = now.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }).toUpperCase();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Focus ──
+const scanInput = document.getElementById('scan-input');
+function focusInput() { scanInput.focus(); }
+document.addEventListener('click', e => {
+  if (!e.target.classList.contains('mode-btn')) focusInput();
+});
+window.addEventListener('load', focusInput);
+
+// ── Mode ──
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-in').className  = 'mode-btn' + (m === 'in'  ? ' active-in'  : '');
+  document.getElementById('btn-out').className = 'mode-btn' + (m === 'out' ? ' active-out' : '');
+
+  const bar = document.getElementById('status-bar');
+  bar.className = 'scan-status-bar mode-' + m;
+
+  document.getElementById('clock').className = 'clock-time mode-' + m;
+
+  document.getElementById('step-label').textContent  = 'STEP 02 — SCAN EMPLOYEE ID';
+  document.getElementById('status-main').textContent = m === 'in' ? 'CHECK IN — ยิงบัตรพนักงาน' : 'CHECK OUT — ยิงบัตรพนักงาน';
+  document.getElementById('status-sub').textContent  = '— Scanner พร้อมรับข้อมูล';
+
+  document.getElementById('ready-dot').className   = 'ready-dot on';
+  document.getElementById('ready-label').textContent = 'READY';
+
+  document.getElementById('panel-mode-label').innerHTML = `MODE — ${m === 'in' ? 'CHECK IN' : 'CHECK OUT'}<br>STEP — 02 / 02`;
+
+  const sbMode = document.getElementById('sb-mode');
+  sbMode.textContent = m === 'in' ? 'CHECK IN' : 'CHECK OUT';
+  sbMode.className = 'statusbar-mode ' + m;
+
+  focusInput();
+}
+
+function resetMode() {
+  mode = null;
+  document.getElementById('btn-in').className  = 'mode-btn';
+  document.getElementById('btn-out').className = 'mode-btn';
+  document.getElementById('status-bar').className = 'scan-status-bar';
+  document.getElementById('clock').className = 'clock-time';
+
+  document.getElementById('step-label').textContent   = 'STEP 01 — SELECT MODE';
+  document.getElementById('status-main').textContent  = 'กรุณาเลือก Check In หรือ Check Out';
+  document.getElementById('status-sub').textContent   = '— ยิง QR หรือกดปุ่มด้านบน';
+  document.getElementById('ready-dot').className      = 'ready-dot';
+  document.getElementById('ready-label').textContent  = 'STANDBY';
+  document.getElementById('panel-mode-label').innerHTML = 'MODE — STANDBY<br>STEP — 01 / 02';
+
+  const sbMode = document.getElementById('sb-mode');
+  sbMode.textContent = '—';
+  sbMode.className = 'statusbar-mode';
+}
+
+// ── Scanner HID ──
+scanInput.addEventListener('input', e => {
+  inputBuffer += e.target.value;
+  scanInput.value = '';
+  clearTimeout(bufferTimer);
+  bufferTimer = setTimeout(() => {
+    if (inputBuffer.trim()) { handleScan(inputBuffer.trim()); inputBuffer = ''; }
+  }, 80);
+});
+
+scanInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    clearTimeout(bufferTimer);
+    const val = (inputBuffer + scanInput.value).trim();
+    scanInput.value = ''; inputBuffer = '';
+    if (val) handleScan(val);
+  }
+});
+
+function handleScan(value) {
+  const v = value.toUpperCase();
+  if (v === 'MODE:IN'  || v === 'CHECKIN')  { setMode('in');  return; }
+  if (v === 'MODE:OUT' || v === 'CHECKOUT') { setMode('out'); return; }
+
+  if (!mode) {
+    document.getElementById('status-sub').textContent = '⚠ เลือก Mode ก่อนสแกนบัตร';
+    return;
+  }
+
+  recordAttendance(value, mode);
+}
+
+function recordAttendance(empId, type) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+  const dateStr = now.toLocaleDateString('en-GB', { day:'2-digit', month:'short' }).toUpperCase();
+
+  records.unshift({ emp: empId, type, time: timeStr, date: dateStr });
+  if (type === 'in') countIn++; else countOut++;
+
+  updateLog();
+  showSuccess(empId, type, timeStr);
+
+  document.getElementById('sb-last').textContent = empId + ' — ' + timeStr;
+  document.getElementById('sb-in').textContent  = countIn;
+  document.getElementById('sb-out').textContent = countOut;
+  document.getElementById('top-count').textContent = records.length;
+
+  setTimeout(resetMode, 900);
+}
+
+function showSuccess(emp, type, time) {
+  document.getElementById('s-type').textContent = type === 'in' ? 'CHECK IN' : 'CHECK OUT';
+  document.getElementById('s-emp').textContent  = emp;
+  document.getElementById('s-time').textContent = time;
+  document.getElementById('s-bar').style.background = type === 'in' ? 'var(--orange)' : 'var(--text)';
+
+  const overlay = document.getElementById('success-overlay');
+  overlay.className = 'success-overlay';
+  void overlay.offsetWidth;
+  overlay.className = 'success-overlay show';
+  setTimeout(() => { overlay.className = 'success-overlay'; }, 850);
+}
+
+function updateLog() {
+  const table = document.getElementById('log-table');
+  document.getElementById('log-count').textContent = records.length + ' records';
+
+  table.innerHTML = records.slice(0, 30).map(r => `
+    <div class="log-row">
+      <div class="log-badge-cell">
+        <div class="log-badge ${r.type}">${r.type === 'in' ? 'IN' : 'OUT'}</div>
+      </div>
+      <div class="log-info">
+        <div class="log-emp">${r.emp}</div>
+        <div class="log-date">${r.date}</div>
+      </div>
+      <div class="log-time-cell">
+        <div class="log-time">${r.time.replace(':','\n')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// init focus
+focusInput();
+</script>
+</body>
+</html>
