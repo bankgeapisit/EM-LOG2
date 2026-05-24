@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATTENDANCE</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Teko:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:     #0A0A0A;
+  --panel:  #111111;
+  --border: #2A2A2A;
+  --text:   #F0EDE8;
+  --muted:  #444440;
+  --dim:    #666660;
+  --green:  #4AFF8C;
+  --red:    #FF4A4A;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+body {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+
+#scan-input {
+  position: fixed; opacity: 0; pointer-events: none;
+  width: 1px; height: 1px; top: 0; left: 0;
+}
+
+/* ══ LAYOUT ══ */
+.layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ══ SIDEBAR ══ */
+.sidebar {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.sidebar-header {
+  padding: 11px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.log-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+.log-scroll::-webkit-scrollbar { width: 2px; }
+.log-scroll::-webkit-scrollbar-thumb { background: var(--border); }
+
+.log-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 44px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  opacity: 0;
+  animation: rowIn 0.2s ease forwards;
+}
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.log-type {
+  display: flex; align-items: center; justify-content: center;
+  padding: 9px 0;
+  border-right: 1px solid var(--border);
+}
+
+.log-dot { width: 5px; height: 5px; border-radius: 50%; }
+.log-dot.in  { background: var(--green); }
+.log-dot.out { background: var(--red); }
+
+.log-info {
+  padding: 7px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+
+.log-emp  { font-size: 11px; color: var(--text); letter-spacing: 0.04em; }
+.log-time { font-size: 9px;  color: var(--muted); }
+
+.log-badge-cell {
+  display: flex; align-items: center; justify-content: center;
+  border-left: 1px solid var(--border);
+  padding: 0 4px;
+}
+
+.log-badge { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
+.log-badge.in  { color: var(--green); }
+.log-badge.out { color: var(--red); }
+
+/* ══ MAIN ══ */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Clock fills entire main area */
+.clock-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 56px;
+  position: relative;
+}
+
+/* Status pill — top right corner inside clock area */
+.status-pill {
+  position: absolute;
+  top: 20px; right: 24px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.pulse-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted);
+  transition: background 0.2s;
+}
+.pulse-dot.active {
+  background: var(--green);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.status-text {
+  font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+  transition: color 0.2s;
+}
+.status-text.in  { color: var(--green); }
+.status-text.out { color: var(--red); }
+
+/* Step hint */
+.step-hint {
+  position: absolute;
+  bottom: 20px; right: 24px;
+  font-size: 9px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--muted);
+  line-height: 1.8;
+  text-align: right;
+}
+
+.clock-time {
+  font-family: 'Teko', sans-serif;
+  font-weight: 300;
+  font-size: clamp(100px, 14vw, 180px);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  transition: color 0.25s ease;
+}
+
+.clock-time.mode-in  { color: #FFFFFF; }
+.clock-time.mode-out { color: #AAAAAA; }
+
+.clock-day {
+  font-family: 'Teko', sans-serif;
+  font-weight: 300;
+  font-size: clamp(40px, 5vw, 66px);
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  margin-top: 12px;
+}
+
+.clock-date {
+  font-family: 'Teko', sans-serif;
+  font-weight: 300;
+  font-size: clamp(40px, 5vw, 66px);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+}
+
+/* Mode indicator bar — thin line under clock */
+.mode-bar {
+  position: absolute;
+  left: 56px; bottom: 60px;
+  display: flex; align-items: center; gap: 16px;
+}
+
+.mode-chip {
+  font-size: 10px; letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: all 0.2s;
+  cursor: pointer;
+  background: transparent;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.mode-chip:hover { border-color: var(--dim); color: var(--dim); }
+.mode-chip.active-in  { border-color: var(--green); color: var(--green); }
+.mode-chip.active-out { border-color: #AAAAAA; color: #AAAAAA; }
+
+/* ══ BOTTOM BAR ══ */
+.bottombar {
+  height: 30px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+.bb-cell {
+  display: flex; align-items: center; gap: 9px;
+  padding: 0 14px;
+  border-right: 1px solid var(--border);
+}
+
+.bb-label { font-size: 9px; letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; }
+.bb-val   { font-size: 10px; color: var(--text); }
+.bb-in    { color: var(--green); }
+.bb-out   { color: var(--red); }
+
+/* ══ FLASH ══ */
+.flash-overlay {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.88);
+  opacity: 0; pointer-events: none; z-index: 100;
+}
+.flash-overlay.show { animation: fshow 0.9s ease forwards; }
+
+@keyframes fshow {
+  0%  { opacity: 0; }
+  12% { opacity: 1; }
+  72% { opacity: 1; }
+  100%{ opacity: 0; }
+}
+
+.flash-card {
+  text-align: center;
+  animation: fcard 0.9s ease forwards;
+}
+@keyframes fcard {
+  0%  { transform: translateY(10px); opacity: 0; }
+  12% { transform: translateY(0);    opacity: 1; }
+  72% { transform: translateY(0);    opacity: 1; }
+  100%{ transform: translateY(-6px); opacity: 0; }
+}
+
+.flash-type {
+  font-size: 10px; letter-spacing: 0.26em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+}
+.flash-emp {
+  font-family: 'Teko', sans-serif;
+  font-weight: 500; font-size: 80px;
+  letter-spacing: 0.04em; line-height: 1; color: #FFFFFF;
+}
+.flash-time {
+  font-size: 14px; color: var(--dim);
+  margin-top: 10px; letter-spacing: 0.1em;
+}
+.flash-line {
+  height: 1px; background: var(--border); margin-top: 20px;
+  animation: lgrow 0.3s 0.12s ease forwards;
+  transform-origin: left; transform: scaleX(0);
+}
+@keyframes lgrow { to { transform: scaleX(1); } }
+</style>
+</head>
+<body>
+
+<input id="scan-input" type="text" autocomplete="off" />
+
+<div class="flash-overlay" id="flash">
+  <div class="flash-card">
+    <div class="flash-type" id="f-type">CHECK IN</div>
+    <div class="flash-emp"  id="f-emp">EMP001</div>
+    <div class="flash-time" id="f-time">09:01:23</div>
+    <div class="flash-line"></div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-label">Log — <span id="log-count">0</span></div>
+    </div>
+    <div class="log-scroll" id="log-scroll"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="clock-area">
+
+      <!-- Status top-right -->
+      <div class="status-pill">
+        <div class="pulse-dot" id="pulse-dot"></div>
+        <span class="status-text" id="status-text">STANDBY</span>
+      </div>
+
+      <!-- Step hint bottom-right -->
+      <div class="step-hint" id="step-hint">STEP 01 / 02<br>ยิง QR CHECK IN / OUT</div>
+
+      <!-- Clock -->
+      <div class="clock-time" id="clock">00:00:00</div>
+      <div class="clock-day"  id="clock-day">MON</div>
+      <div class="clock-date" id="clock-date">01 JAN</div>
+
+      <!-- Mode chips -->
+      <div class="mode-bar">
+        <button class="mode-chip" id="btn-in"  onclick="setMode('in')">Check In</button>
+        <button class="mode-chip" id="btn-out" onclick="setMode('out')">Check Out</button>
+      </div>
+
+    </div>
+
+    <!-- BOTTOM BAR -->
+    <div class="bottombar">
+      <div class="bb-cell">
+        <span class="bb-label">Station</span>
+        <span class="bb-val">MAIN — 01</span>
+      </div>
+      <div class="bb-cell">
+        <span class="bb-label">In</span>
+        <span class="bb-val bb-in" id="bb-in">0</span>
+      </div>
+      <div class="bb-cell">
+        <span class="bb-label">Out</span>
+        <span class="bb-val bb-out" id="bb-out">0</span>
+      </div>
+      <div class="bb-cell">
+        <span class="bb-label">Last</span>
+        <span class="bb-val" id="bb-last">—</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let mode = null, records = [], cIn = 0, cOut = 0;
+let buf = '', bufTimer = null;
+
+// Clock
+function tick() {
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    n.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+  document.getElementById('clock-day').textContent =
+    n.toLocaleDateString('en-GB', {weekday:'short'}).toUpperCase();
+  document.getElementById('clock-date').textContent =
+    n.toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).toUpperCase();
+}
+setInterval(tick, 1000); tick();
+
+// Focus
+const inp = document.getElementById('scan-input');
+function doFocus() { inp.focus(); }
+document.addEventListener('click', e => { if(!e.target.classList.contains('mode-chip')) doFocus(); });
+window.addEventListener('load', doFocus);
+
+// Scanner HID
+inp.addEventListener('input', e => {
+  buf += e.target.value; inp.value = '';
+  clearTimeout(bufTimer);
+  bufTimer = setTimeout(() => { if(buf.trim()) { handleScan(buf.trim()); buf = ''; } }, 80);
+});
+inp.addEventListener('keydown', e => {
+  if(e.key === 'Enter') {
+    clearTimeout(bufTimer);
+    const v = (buf + inp.value).trim(); inp.value = ''; buf = '';
+    if(v) handleScan(v);
+  }
+});
+
+function handleScan(v) {
+  const u = v.toUpperCase();
+  if(u === 'MODE:IN'  || u === 'CHECKIN')  { setMode('in');  return; }
+  if(u === 'MODE:OUT' || u === 'CHECKOUT') { setMode('out'); return; }
+  if(!mode) {
+    document.getElementById('step-hint').textContent = 'ยิง QR CHECK IN / OUT ก่อน';
+    return;
+  }
+  record(v, mode);
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-in').className  = 'mode-chip' + (m === 'in'  ? ' active-in'  : '');
+  document.getElementById('btn-out').className = 'mode-chip' + (m === 'out' ? ' active-out' : '');
+  document.getElementById('clock').className   = 'clock-time mode-' + m;
+
+  const st = document.getElementById('status-text');
+  st.textContent = m === 'in' ? 'CHECK IN' : 'CHECK OUT';
+  st.className = 'status-text ' + m;
+
+  document.getElementById('pulse-dot').className = 'pulse-dot active';
+  document.getElementById('step-hint').innerHTML = 'STEP 02 / 02<br>ยิงบัตรพนักงาน';
+  doFocus();
+}
+
+function resetMode() {
+  mode = null;
+  document.getElementById('btn-in').className  = 'mode-chip';
+  document.getElementById('btn-out').className = 'mode-chip';
+  document.getElementById('clock').className   = 'clock-time';
+  const st = document.getElementById('status-text');
+  st.textContent = 'STANDBY'; st.className = 'status-text';
+  document.getElementById('pulse-dot').className = 'pulse-dot';
+  document.getElementById('step-hint').innerHTML = 'STEP 01 / 02<br>ยิง QR CHECK IN / OUT';
+}
+
+function record(emp, type) {
+  const n = new Date();
+  const t = n.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+  const d = n.toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).toUpperCase();
+  records.unshift({emp, type, t, d});
+  if(type === 'in') cIn++; else cOut++;
+  renderLog(); showFlash(emp, type, t);
+  document.getElementById('bb-in').textContent   = cIn;
+  document.getElementById('bb-out').textContent  = cOut;
+  document.getElementById('bb-last').textContent = emp;
+  setTimeout(resetMode, 1000);
+}
+
+function showFlash(emp, type, t) {
+  document.getElementById('f-type').textContent = type === 'in' ? 'CHECK IN' : 'CHECK OUT';
+  document.getElementById('f-emp').textContent  = emp;
+  document.getElementById('f-time').textContent = t;
+  const fl = document.getElementById('flash');
+  fl.className = 'flash-overlay';
+  void fl.offsetWidth;
+  fl.className = 'flash-overlay show';
+  setTimeout(() => { fl.className = 'flash-overlay'; }, 950);
+}
+
+function renderLog() {
+  document.getElementById('log-count').textContent = records.length;
+  document.getElementById('log-scroll').innerHTML = records.slice(0,50).map(r => `
+    <div class="log-row">
+      <div class="log-type"><div class="log-dot ${r.type}"></div></div>
+      <div class="log-info">
+        <div class="log-emp">${r.emp}</div>
+        <div class="log-time">${r.t}</div>
+      </div>
+      <div class="log-badge-cell">
+        <span class="log-badge ${r.type}">${r.type === 'in' ? 'IN' : 'OUT'}</span>
+      </div>
+    </div>`).join('');
+}
+
+doFocus();
+</script>
+</body>
+</html>
